@@ -28,7 +28,7 @@ Let's define a function to call our parser and handle any possible errors:
 
 \begin{code}
 readExpr :: String -> String
-readExpr input = case parse symbol "lisp" input of
+readExpr input = case parse (spaces >> symbol) "lisp" input of
     Left err -> "No match: " ++ show err
     Right val -> "Found value"
 \end{code}
@@ -60,5 +60,28 @@ $ ./simple_parser a
 No match: "lisp" (line 1, column 1):
 unexpected "a"
 \end{verbatim}
+
+Next, we'll add a series of improvements to our parser that'll let it recognize
+progressively more complicated expressions. The current parser chokes if there's
+whitespace preceding our symbol:
+
+\begin{verbatim}
+$ ./simple_parser "   %"
+No match: "lisp" (line 1, column 1):
+unexpected " "
+\end{verbatim}
+
+Let's fix that, so that we ignore whitespace.
+First, let's define a parser that recognizes any number of whitespace characters.
+Incidentally, this is why we included the hiding (spaces) clause when we
+imported Parsec: there's already a spaces function in that library, but it
+doesn't quite do what we want it to. (For that matter, there's also a parser
+called lexeme that does exactly what we want, but we'll ignore that for
+pedagogical purposes.)
+
+\begin{code}
+spaces :: Parser ()
+spaces = skipMany1 space
+\end{code}
 
 \end{document}
