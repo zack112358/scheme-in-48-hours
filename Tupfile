@@ -1,0 +1,2 @@
+include_rules
+: foreach *.lhs |> pdflatex %f |> %B.pdf %B.aux %B.log
