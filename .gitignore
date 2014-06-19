@@ -1,3 +1,9 @@
 Hello_
 *.hi
 *.o
+*.aux
+*.log
+*.pdf
+*.swp
+*.swo
+.tup
