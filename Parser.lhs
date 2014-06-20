@@ -1,7 +1,10 @@
 \documentclass{article}
 \usepackage{listings}
+\usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
 \begin{document}
 \lstnewenvironment{code}{\lstset{language=Haskell,basicstyle=\small}}{}
+\lstnewenvironment{deadcode}{\lstset{language=Haskell,basicstyle=\small}}{}
+\lstnewenvironment{shell}{\lstset{language=bash,basicstyle=\small}}{}
 
 \begin{code}
 module Main where 
@@ -27,12 +30,12 @@ symbol = oneOf "!#$%&|*+-/:<=>?@^_~"
 This is another example of a monad: in this case, the "extra information" that is being hidden is all the info about position in the input stream, backtracking record, first and follow sets, etc. Parsec takes care of all of that for us. We need only use the Parsec library function oneOf, and it'll recognize a single one of any of the characters in the string passed to it. Parsec provides a number of pre-built parsers: for example, letter and digit are library functions. And as you're about to see, you can compose primitive parsers into more sophisticated productions.
 Let's define a function to call our parser and handle any possible errors:
 
-\begin{verbatim}
+\begin{deadcode}
 readExpr :: String -> String
 readExpr input = case parse symbol "lisp" input of
     Left err -> "No match: " ++ show err
     Right val -> "Found value"
-\end{verbatim}
+\end{deadcode}
 
 As you can see from the type signature, readExpr is a function (->) from a String to a String. We name the parameter input, and pass it, along with the symbol parser we defined above to the Parsec function parse. The second parameter to parse is a name for the input. It is used for error messages.
 
@@ -44,34 +47,33 @@ The case...of construction is an example of pattern matching, which we will see 
 
 Finally, we need to change our main function to call readExpr and print out the result (need to add import System.Environment in the beginning of the file now):
 
-\begin{verbatim} 
+\begin{deadcode} 
 main :: IO ()
 main = do 
     args <- getArgs
     putStrLn (readExpr (args !! 0))
-\end{verbatim}
-
+\end{deadcode}
 
 To compile and run this, you need to specify --make on the command line, or else there will be link errors. For example:
 
-\begin{verbatim}
+\begin{deadcode}
 $ ghc --make -o simple_parser listing3.1.hs
 $ ./simple_parser $
 Found value
 $ ./simple_parser a
 No match: "lisp" (line 1, column 1):
 unexpected "a"
-\end{verbatim}
+\end{deadcode}
 
 Next, we'll add a series of improvements to our parser that'll let it recognize
 progressively more complicated expressions. The current parser chokes if there's
 whitespace preceding our symbol:
 
-\begin{verbatim}
+\begin{deadcode}
 $ ./simple_parser "   %"
 No match: "lisp" (line 1, column 1):
 unexpected " "
-\end{verbatim}
+\end{deadcode}
 
 Let's fix that, so that we ignore whitespace.
 First, let's define a parser that recognizes any number of whitespace characters.
@@ -128,7 +130,7 @@ main = do
                   Right val -> case val of String s -> "parsed string " ++ s)
 \end{code}
 
-\begin{verbatim}
+\begin{deadcode}
 (<screen>pond) 2 scheme-in-48-hours 0 $ tup upd && ./Parser ' %'
 [ tup ] [0.000s] Scanning filesystem...
 [ tup ] [0.001s] Reading in new environment variables...
@@ -139,12 +141,12 @@ main = do
 Found value
 parsed string asdf
 (<screen>pond) 2 scheme-in-48-hours 0 $ 
-\end{verbatim}
+\end{deadcode}
 
 
-Now let's move on to Scheme variables. An atom is a letter or symbol, followed by any number of letters, digits, or symbols:
+Now let's move on to Scheme variables. An atom is a letter or symbol, followed by any number of letters, digits, or symbols
 
-\begin{verbatim} 
+\begin{deadcode} 
 parseAtom :: Parser LispVal
 parseAtom = do 
               first <- letter <|> symbol
@@ -154,7 +156,7 @@ parseAtom = do
                          "#t" -> Bool True
                          "#f" -> Bool False
                          _    -> Atom atom
-\end{verbatim}
+\end{deadcode}
 
 but that's boring so
 
@@ -177,9 +179,11 @@ cons operator : for this. Instead of :, we could have used the concatenation
 operator ++ like this [first] ++ rest; recall that first is just a single
 character, so we convert it into a singleton list by putting brackets around it.
 Then we use a case expression to determine which LispVal to create and return,
-matching against the literal strings for true and false. The underscore \verbatim}_} alternative is a readability trick: case blocks continue until a \verbatim}_} case (or fail
-any case which also causes the failure of the whole case expression), think of \verbatim}_}
-as a wildcard. So if the code falls through to the \verbatim}_} case, it always matches,
+matching against the literal strings for true and false. The underscore
+alternative is a readability trick: case blocks continue until an underscore  case (or fail
+any case which also causes the failure of the whole case expression), think of
+underscore
+as a wildcard. So if the code falls through to the underscore case, it always matches,
 and returns the value of atom.
 
 Finally, we create one more parser, for numbers. This shows one more way of
@@ -190,8 +194,8 @@ parseNumber :: Parser LispVal
 parseNumber = liftM (Number . read) $ many1 digit
 \end{code}
 
-It's easiest to read this backwards, since both function application ($) and
-function composition (.) associate to the right. The parsec combinator many1
+It's easiest to read this backwards, since both function application (\verb+$+) and
+function composition (\verb+.+) associate to the right. The parsec combinator many1
 matches one or more of its argument, so here we're matching one or more digits.
 We'd like to construct a number LispVal from the resulting string, but we have a
 few type mismatches. First, we use the built-in function read to convert that
@@ -202,11 +206,15 @@ combine the two function applications.
 
 Unfortunately, the result of many1 digit is actually a Parser String, so our
 combined
-\verbatim}Number . read}
+\begin{deadcode}
+Number . read
+\end{deadcode}
 still can't operate on it. We need a way to tell it to
 just operate on the value inside the monad, giving us back a Parser LispVal. The
 standard function liftM does exactly that, so we apply liftM to our 
-\verbatim}Number . read}
+\begin{deadcode}
+Number . read
+\end{deadcode}
 function, and then apply the result of that to our parser.
 
 
