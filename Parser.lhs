@@ -113,10 +113,10 @@ data LispVal = Atom String
              | Bool Bool
 \end{code} 
 
-\begin{code}
+\begin{deadcode}
 parseString :: Parser LispVal
 parseString = char '"' >> many(noneOf "\"") >>= \x -> char '"' >> (return $ String x)
-\end{code}
+\end{deadcode}
 
 Now let's test and see what comes out when we use the parser
 
@@ -267,6 +267,13 @@ parseNumber = many1 digit >>= \digitStr -> return$Number$read digitStr
     gives a literal quote character instead of terminating the string. You may
     want to replace noneOf \verb+"\""+ with a new parser action that accepts either a
     non-quote character or a backslash followed by a quote mark.
+
+\begin{code}
+parseString :: Parser LispVal
+parseString = char '"'
+              >> many(noneOf "\"" <|> (char '\\' >> char '"'))
+              >>= \x -> char '"' >> (return $ String x)
+\end{code}
 
     \item  Modify the previous exercise to support \verb+\n+, \verb+\r+,
     \verb+\t+, \verb+\\+, and any other
