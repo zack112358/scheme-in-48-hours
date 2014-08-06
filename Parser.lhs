@@ -268,16 +268,28 @@ parseNumber = many1 digit >>= \digitStr -> return$Number$read digitStr
     want to replace noneOf \verb+"\""+ with a new parser action that accepts either a
     non-quote character or a backslash followed by a quote mark.
 
-\begin{code}
+\begin{deadcode}
 parseString :: Parser LispVal
 parseString = char '"'
               >> many(noneOf "\\\"" <|> (char '\\' >> char '"'))
               >>= \x -> char '"' >> (return $ String x)
-\end{code}
+\end{deadcode}
 
     \item  Modify the previous exercise to support \verb+\n+, \verb+\r+,
     \verb+\t+, \verb+\\+, and any other
     desired escape characters
+
+\begin{code}
+parseString :: Parser LispVal
+parseString = char '"'
+              >> many(noneOf "\\\""
+                      <|> (char '\\' >> (char '"'
+                                         <|> char '\\'
+                                         <|> (char 'n' >> return '\n')
+                                         <|> (char 'r' >> return '\r')
+                                         <|> (char 't' >> return '\t'))))
+              >>= \x -> char '"' >> (return $ String x)
+\end{code}
 
     \item Change parseNumber to support the Scheme standard for different bases.
     You may find the readOct and readHex functions useful.
