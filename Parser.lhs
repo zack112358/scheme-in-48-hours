@@ -335,8 +335,19 @@ parseList =
              >> char ')'
              >> (return$DottedList head tail)))
 
+parseQuoted :: Parser LispVal
+parseQuoted = char '\''
+              >> parseExpr
+              >>= \expr -> return$List [Atom "quote", expr]
+
 parseExpr :: Parser LispVal
-parseExpr = parseNumber <|> parseAtom <|> parseString <|> parseList
+parseExpr = parseNumber
+            <|> parseAtom
+            <|> parseString
+            <|> parseList
+            <|> parseQuoted
+
+
 \end{code}
 
 
