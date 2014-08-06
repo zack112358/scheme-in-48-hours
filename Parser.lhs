@@ -94,12 +94,12 @@ recognize one or more spaces.
 Now, let's edit our parse function so that it uses this new parser. Changes are
 no longer in red:
 
-\begin{code}
+\begin{deadcode}
 readExpr :: String -> String
 readExpr input = case parse (spaces >> symbol) "lisp" input of
     Left err -> "No match: " ++ show err
     Right val -> "Found value"
-\end{code}
+\end{deadcode}
 
 Right now, the parser doesn't do much of anything—it just tells us whether a given string can be recognized or not. Generally, we want something more out of our parsers: we want them to convert the input into a data structure that we can traverse easily. In this section, we learn how to define a data type, and how to modify our parser so that it returns this data type.
 First, we need to define a data type that can hold any Lisp value:
@@ -216,6 +216,32 @@ standard function liftM does exactly that, so we apply liftM to our
 Number . read
 \end{deadcode}
 function, and then apply the result of that to our parser.
+
+This style of programming—relying heavily on function composition, function
+application, and passing functions to functions—is very common in Haskell code.
+It often lets you express very complicated algorithms in a single line, breaking
+down intermediate steps into other functions that can be combined in various
+ways. Unfortunately, it means that you often have to read Haskell code from
+right-to-left and keep careful track of the types. We'll be seeing many more
+examples throughout the rest of the tutorial, so hopefully you'll get pretty
+comfortable with it.
+
+Let's create a parser that accepts either a string, a number, or an atom:
+
+\begin{code}
+parseExpr :: Parser LispVal
+parseExpr = parseNumber <|> parseAtom <|> parseString
+\end{code}
+
+And update readExpr to match:
+
+\begin{code}
+readExpr :: String -> String
+readExpr input = case parse parseExpr "lisp" input of
+    Left err -> "No match: " ++ show err
+    Right val -> "Found value"
+\end{code}
+
 
 
 
