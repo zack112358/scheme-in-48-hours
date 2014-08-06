@@ -228,10 +228,10 @@ comfortable with it.
 
 Let's create a parser that accepts either a string, a number, or an atom:
 
-\begin{code}
+\begin{deadcode}
 parseExpr :: Parser LispVal
 parseExpr = parseNumber <|> parseAtom <|> parseString
-\end{code}
+\end{deadcode}
 
 And update readExpr to match:
 
@@ -306,6 +306,38 @@ parseString = char '"'
     represent eg. a Rational as a numerator and denominator, or a Complex as a
     real and imaginary part (each itself a Real).
 \end{itemize}
+
+Recursive Parsers: Adding lists, dotted lists, and quoted datums[edit]
+Next, we add a few more parser actions to our interpreter. Start with the
+parenthesized lists that make Lisp famous:
+
+\begin{code}
+
+--trySepBy :: Parser -- like sepBy but backtrack if we consume separator
+                   -- and then get stuck
+trySepBy :: Parser a -> Parser b -> Parser [a]
+trySepBy item sep = item >>= \first -> (try$sep
+                                            >> trySepBy item sep
+                                            >>= \rest -> return [first])
+                                        <|> (return [first])
+
+parseList :: Parser LispVal
+parseList = 
+    char '('
+    >> skipMany space
+    >> trySepBy parseExpr spaces  -- ordinary sepBy gets stuck on space in (1 . 2)
+    >>= \head -> skipMany space -- Soak any irrelevant space
+    >> ((char ')' >> (return$List head)) -- End here or continue into dotted list
+        <|> (char '.'
+             >> skipMany space
+             >> parseExpr 
+             >>= \tail -> skipMany space
+             >> char ')'
+             >> (return$DottedList head tail)))
+
+parseExpr :: Parser LispVal
+parseExpr = parseNumber <|> parseAtom <|> parseString <|> parseList
+\end{code}
 
 
 
