@@ -249,12 +249,17 @@ Exercises
     \begin{itemize}
         \item do-notation
 
-\begin{code}
+\begin{deadcode}
 parseNumber = do digitStr <- many1 digit
                  return$Number$read digitStr
-\end{code}
+\end{deadcode}
 
         \item explicit sequencing with the \verb+>>=+ operator
+
+\begin{code}
+parseNumber = many1 digit >>= \digitStr -> return$Number$read digitStr
+\end{code}
+
     \end{itemize}
 
     \item Our strings aren't quite R5RS compliant, because they don't support
