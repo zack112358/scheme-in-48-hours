@@ -47,12 +47,12 @@ The case...of construction is an example of pattern matching, which we will see 
 
 Finally, we need to change our main function to call readExpr and print out the result (need to add import System.Environment in the beginning of the file now):
 
-\begin{deadcode} 
+\begin{code} 
 main :: IO ()
 main = do 
     args <- getArgs
     putStrLn (readExpr (args !! 0))
-\end{deadcode}
+\end{code}
 
 To compile and run this, you need to specify --make on the command line, or else there will be link errors. For example:
 
@@ -120,7 +120,7 @@ parseString = char '"' >> many(noneOf "\"") >>= \x -> char '"' >> (return $ Stri
 
 Now let's test and see what comes out when we use the parser
 
-\begin{code} 
+\begin{deadcode} 
 main :: IO ()
 main = do 
     args <- getArgs
@@ -128,7 +128,7 @@ main = do
     putStrLn (case parse parseString "" "\"asdf\"" of
                   Left err -> "Failed to parse string: " ++ show err
                   Right val -> case val of String s -> "parsed string " ++ s)
-\end{code}
+\end{deadcode}
 
 \begin{deadcode}
 (<screen>pond) 2 scheme-in-48-hours 0 $ tup upd && ./Parser ' %'
