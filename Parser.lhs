@@ -271,7 +271,7 @@ parseNumber = many1 digit >>= \digitStr -> return$Number$read digitStr
 \begin{code}
 parseString :: Parser LispVal
 parseString = char '"'
-              >> many(noneOf "\"" <|> (char '\\' >> char '"'))
+              >> many(noneOf "\\\"" <|> (char '\\' >> char '"'))
               >>= \x -> char '"' >> (return $ String x)
 \end{code}
 
