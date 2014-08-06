@@ -161,9 +161,9 @@ parseAtom = do
 but that's boring so
 
 \begin{code}
-parseAtom = letter <|> symbol >>= \first ->
+parseAtom = (letter <|> symbol) >>= \first ->
             many(letter <|> digit <|> symbol) >>= \rest ->
-            let atom = first:rest
+            let atom = first:rest in 
             return $ case atom of "#t" -> Bool True
                                   "#f" -> Bool False
                                   _    -> Atom atom
