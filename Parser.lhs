@@ -318,7 +318,7 @@ parenthesized lists that make Lisp famous:
 trySepBy :: Parser a -> Parser b -> Parser [a]
 trySepBy item sep = item >>= \first -> (try$sep
                                             >> trySepBy item sep
-                                            >>= \rest -> return [first])
+                                            >>= \rest -> return (first:rest))
                                         <|> (return [first])
 
 parseList :: Parser LispVal
