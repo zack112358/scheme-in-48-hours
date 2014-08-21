@@ -121,7 +121,13 @@ context = [("+", foldl1 (+)),
            ("/", foldl1 div),
            ("mod", foldl1 mod),
            ("quotient", foldl1 quot),
-           ("remainder", foldl1 rem)]
+           ("remainder", foldl1 rem),
+           ("symbol->string", symbolToString),
+           ("string->symbol", stringToSymbol)]
+
+symbolToString [(Atom s)] = String s
+stringToSymbol [(String s)] = Atom s
+
 
 \end{code}
 
@@ -170,9 +176,5 @@ instance Integral LispVal where
 
 Now we can throw around LispVals in Haskell as well as lisp, which should make
 our code a little easier to write.
-
-
-
-
 
 \end{document}

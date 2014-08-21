@@ -111,7 +111,7 @@ data LispVal = Atom String
              | Number Integer
              | String String
              | Bool Bool
-             | PrimitiveOp ([LispVal] -> LispVal) 
+             | PrimitiveOp ([LispVal] -> LispVal)  -- Added for evaluator
 \end{code} 
 
 \begin{deadcode}
