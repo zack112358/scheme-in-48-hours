@@ -168,6 +168,9 @@ instance Integral LispVal where
 
 \end{code}
 
+Now we can throw around LispVals in Haskell as well as lisp, which should make
+our code a little easier to write.
+
 
 
 

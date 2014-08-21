@@ -111,7 +111,7 @@ data LispVal = Atom String
              | Number Integer
              | String String
              | Bool Bool
-             | PrimitiveOp ([LispVal] -> LispVal)
+             | PrimitiveOp ([LispVal] -> LispVal) 
 \end{code} 
 
 \begin{deadcode}
@@ -314,8 +314,8 @@ parenthesized lists that make Lisp famous:
 
 \begin{code}
 
---trySepBy :: Parser -- like sepBy but backtrack if we consume separator
-                   -- and then get stuck
+-- trySepBy is like sepBy but backtrack if we consume separator
+-- and then get stuck
 trySepBy :: Parser a -> Parser b -> Parser [a]
 trySepBy item sep = item >>= \first -> (try$sep
                                             >> trySepBy item sep
