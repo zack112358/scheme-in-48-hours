@@ -1,3 +1,5 @@
 include_rules
 : foreach *.lhs |> pdflatex %f < /dev/null > /dev/null |> %B.pdf %B.aux %B.log
-: foreach *.lhs |> ghc -package parsec %f |> %B.hi %B.o %B
+: Parser.lhs | |> ghc -prof -auto-all -caf-all -c %f |> %B.hi %B.o
+: Evaluator.lhs | Parser.hi |> ghc -prof -auto-all -caf-all  -c %f |> %B.hi %B.o
+: Main.hs | *.hi *.o |> ghc -prof -auto-all -caf-all  %f |> %B.hi %B.o %B

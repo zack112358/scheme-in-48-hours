@@ -7,7 +7,7 @@
 \lstnewenvironment{shell}{\lstset{language=bash,basicstyle=\small}}{}
 
 \begin{code}
-module Main where 
+module Parser where 
 import System.Environment
 \end{code}
 
