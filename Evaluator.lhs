@@ -12,6 +12,7 @@
 module Evaluator where 
 import System.Environment
 import Control.Monad
+import Control.Monad.Error
 import Text.ParserCombinators.Parsec
 import Parser hiding (readExpr, main)
 
@@ -177,4 +178,56 @@ instance Integral LispVal where
 Now we can throw around LispVals in Haskell as well as lisp, which should make
 our code a little easier to write.
 
+
+Currently, there are a variety of places within the code where we either ignore errors or silently assign "default" values like #f or 0 that make no sense. Some languages – like Perl and PHP – get along fine with this approach. However, it often means that errors pass silently throughout the program until they become big problems, which means rather inconvenient debugging sessions for the programmer. We'd like to signal errors as soon as they happen and immediately break out of execution.
+First, we need to import Control.Monad.Error to get access to Haskell's built-in
+error functions. Then, we should define a data type to represent an error:
+
+\begin{code}
+data LispError = NumArgs Integer [LispVal]
+               | TypeMismatch String LispVal
+               | Parser ParseError
+               | BadSpecialForm String LispVal
+               | NotFunction String String
+               | UnboundVar String String
+               | Default String
+               | Unimplemented
+
+showError :: LispError -> String
+showError (UnboundVar message varname)  = message ++ ": " ++ varname
+showError (BadSpecialForm message form) = message ++ ": " ++ show form
+showError (NotFunction message func)    = message ++ ": " ++ show func
+showError (NumArgs expected found)      = "Expected " ++ show expected 
+                                       ++ " args; found values " ++ unwordsList found
+showError (TypeMismatch expected found) = "Invalid type: expected " ++ expected
+                                       ++ ", found " ++ show found
+showError (Parser parseErr)             = "Parse error at " ++ show parseErr
+showError (Default s)                   = s
+showError (Unimplemented)               = "Unimplemented"
+ 
+instance Show LispError where show = showError
+\end{code}
+
+Our next step is to make our error type into an instance of Error. This is
+necessary for it to work with GHC's built-in error handling functions. Being an
+instance of error just means that it must provide functions to create an
+instance either from a previous error message or by itself:
+
+\begin{code}
+instance Error LispError where
+     noMsg = Default "An error has occurred"
+     strMsg = Default
+\end{code}
+
+Then we define a type to represent functions that may throw a LispError or
+return a value. Remember how parse used an Either data type to represent
+exceptions? We take the same approach here:
+
+\begin{code}
+type ThrowsError = Either LispError
+\end{code}
+
+
 \end{document}
+
+
