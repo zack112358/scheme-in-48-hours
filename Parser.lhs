@@ -316,11 +316,13 @@ parenthesized lists that make Lisp famous:
 
 -- trySepBy is like sepBy but backtrack if we consume separator
 -- and then get stuck
+-- Actually, fixed to not use backtracking. Consumes a separator at the
+-- beginning. FIXME alpha-vary.
 trySepBy :: Parser a -> Parser b -> Parser [a]
-trySepBy item sep = item >>= \first -> (try$sep
-                                            >> trySepBy item sep
-                                            >>= \rest -> return (first:rest))
-                                        <|> (return [first])
+trySepBy item sep = optional sep
+                    >> ((item >>= \first -> trySepBy item sep
+                              >>= \rest -> return (first:rest))
+                         <|> return [])
 
 parseList :: Parser LispVal
 parseList = 

@@ -285,7 +285,8 @@ eval (Atom id) = case (lookup id context) of
 eval other = throwError $ BadSpecialForm "Unrecognized special form" other
 
 applyLambda :: LispVal -> [LispVal] -> ThrowsError LispVal
-applyLambda (PrimitiveOp f) = return.f 
+applyLambda (PrimitiveOp f) [] = throwError $ NumArgs 1 []
+applyLambda (PrimitiveOp f) args = return $ f args
 
 operize :: ([LispVal] -> LispVal) -> LispVal
 operize = PrimitiveOp
