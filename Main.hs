@@ -1,4 +1,4 @@
 module Main where 
-import qualified Evaluator
+import qualified Repl
 
-main = Evaluator.main
+main = Repl.main
