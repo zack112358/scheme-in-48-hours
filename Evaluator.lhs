@@ -19,15 +19,28 @@ import Parser hiding (readExpr, main)
 
 context :: [(String, LispVal)]
 
-context = [("+", binPlusOp $ foldl1 (+)),
-           ("-", binPlusOp $ foldl1 (-)),
-           ("*", binPlusOp $ foldl1 (*)),
-           ("/", binPlusOp $ foldl1 div),
-           ("mod", binPlusOp $ foldl1 mod),
-           ("quotient", binPlusOp $ foldl1 quot),
-           ("remainder", binPlusOp $ foldl1 rem),
+context = [("+", numBinPlusOp $ foldl1 (+)),
+           ("-", numBinPlusOp $ foldl1 (-)),
+           ("*", numBinPlusOp $ foldl1 (*)),
+           ("/", numBinPlusOp $ foldl1 div),
+           ("mod", numBinPlusOp $ foldl1 mod),
+           ("quotient", numBinPlusOp $ foldl1 quot),
+           ("remainder", numBinPlusOp $ foldl1 rem),
            ("symbol->string", PrimitiveOp symbolToString),
-           ("string->symbol", PrimitiveOp stringToSymbol)]
+           ("string->symbol", PrimitiveOp stringToSymbol),
+           ("=", boolBinNumOp (==)),
+           ("<", boolBinNumOp (<)),
+           (">", boolBinNumOp (>)),
+           ("/=", boolBinNumOp (/=)),
+           (">=", boolBinNumOp (>=)),
+           ("<=", boolBinNumOp (<=)),
+           ("&&", PrimitiveOp opAnd),
+           ("||", PrimitiveOp opOr),
+           ("string=?", boolBinStrOp (==)),
+           ("string<?", boolBinStrOp (<)),
+           ("string>?", boolBinStrOp (>)),
+           ("string<=?", boolBinStrOp (<=)),
+           ("string>=?", boolBinStrOp (>=))]
 
 \end{code}
 The typecheck function will check from the given spec of what argument types
@@ -40,24 +53,41 @@ function checking for that.
 typeCheckArgs :: (LispVal -> Bool) -> String -> [LispVal] -> ThrowsError ()
 typeCheckArgs _ _ [] = return ()
 typeCheckArgs typePred typeName (arg:args) =
-    if typePred arg
-        then typeCheckArgs typePred typeName args
-        else throwError $ TypeMismatch typeName arg
+  if typePred arg
+    then typeCheckArgs typePred typeName args
+    else throwError $ TypeMismatch typeName arg
 
-binPlusOp :: ([LispVal] -> LispVal) -> LispVal
-binPlusOp f = PrimitiveOp $
-    \args -> case args of [] -> throwError $ NumArgs 2 $ List []
-                          [arg] -> throwError $ NumArgs 2 $ List [arg]
-                          args -> typeCheckArgs isNumber "Number" args
-                                  >> (return $ f args)
+numBinPlusOp :: ([LispVal] -> LispVal) -> LispVal
+numBinPlusOp f = PrimitiveOp $
+  \args -> case args of [] -> throwError $ NumArgs 2 $ List []
+                        [arg] -> throwError $ NumArgs 2 $ List [arg]
+                        args -> typeCheckArgs isNumber "Number" args
+                                >> (return $ f args)
 
-symbolToString::[LispVal] -> ThrowsError LispVal
+boolBinOp :: (LispVal -> Bool) -> String -> (LispVal -> LispVal -> Bool) -> LispVal
+boolBinOp typePred typeName f = PrimitiveOp $ \args ->
+  case args of
+    [l, r] -> typeCheckArgs typePred typeName args
+              >> (return $ Bool $ f l r)
+    _ -> throwError $ TypeMismatch ("(" ++ typeName ++ " " ++ typeName ++ ")")
+                    $ List args
+
+boolBinBoolOp = boolBinOp isBool "Bool"
+boolBinNumOp = boolBinOp isNumber "Number"
+boolBinStrOp = boolBinOp isString "String"
+
+symbolToString :: [LispVal] -> ThrowsError LispVal
 symbolToString [(Atom s)] = return $ String s
 symbolToString args = throwError $ TypeMismatch "(Atom)" $ List args
 
-stringToSymbol::[LispVal] -> ThrowsError LispVal
+stringToSymbol :: [LispVal] -> ThrowsError LispVal
 stringToSymbol [(String s)] = return $ Atom s
 stringToSymbol args = throwError $ TypeMismatch "(String)" $ List args
+
+opAnd [(Bool l), (Bool r)] = return $ Bool (l && r)
+opAand args = throwError $ TypeMismatch "(Bool Bool)" $ List args
+opOr [(Bool l), (Bool r)] = return $ Bool (l || r)
+opOr args = throwError $ TypeMismatch "(Bool Bool)" $ List args
 
 trapError action = catchError action (return . show)
 extractValue :: ThrowsError a -> a
@@ -81,8 +111,8 @@ applyLambda (PrimitiveOp f) = f
 
 readExpr :: String -> ThrowsError LispVal
 readExpr input = case parse parseExpr "lisp" input of
-    Left err -> throwError $ Parser err
-    Right val -> return val
+  Left err -> throwError $ Parser err
+  Right val -> return val
 
 main :: IO ()
 main = do args <- getArgs
