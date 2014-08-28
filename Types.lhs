@@ -35,6 +35,20 @@ data LispVal = Atom String
              | Bool Bool
              | PrimitiveOp ([LispVal] -> ThrowsError LispVal)
 
+isAtom (Atom _) = True
+isAtom _ = False
+isList (List _) = True
+isList (DottedList _ _) = True
+isList _ = False
+isNumber (Number _) = True
+isNumber _ = False
+isString (String _) = True
+isString _ = False
+isBool (Bool _) = True
+isBool _ = False
+isPrimitiveOp (PrimitiveOp _) = True
+isPrimitiveOp _ = False
+
 showVal :: LispVal -> String
 showVal (String s) = "\"" ++ s ++ "\""
 showVal (Bool b) = if b then "#t" else "#f"

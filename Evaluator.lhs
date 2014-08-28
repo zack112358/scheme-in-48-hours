@@ -29,17 +29,35 @@ context = [("+", binPlusOp $ foldl1 (+)),
            ("symbol->string", PrimitiveOp symbolToString),
            ("string->symbol", PrimitiveOp stringToSymbol)]
 
+\end{code}
+The typecheck function will check from the given spec of what argument types
+should be, whether they are actually that type.
+
+The type argument specifies what type they should be, and should be a predicate
+function checking for that.
+\begin{code}
+
+typeCheckArgs :: (LispVal -> Bool) -> String -> [LispVal] -> ThrowsError ()
+typeCheckArgs _ _ [] = return ()
+typeCheckArgs typePred typeName (arg:args) =
+    if typePred arg
+        then typeCheckArgs typePred typeName args
+        else throwError $ TypeMismatch typeName arg
+
 binPlusOp :: ([LispVal] -> LispVal) -> LispVal
 binPlusOp f = PrimitiveOp $
     \args -> case args of [] -> throwError $ NumArgs 2 $ List []
                           [arg] -> throwError $ NumArgs 2 $ List [arg]
-                          args -> return $ f args
+                          args -> typeCheckArgs isNumber "Number" args
+                                  >> (return $ f args)
 
 symbolToString::[LispVal] -> ThrowsError LispVal
 symbolToString [(Atom s)] = return $ String s
+symbolToString args = throwError $ TypeMismatch "(Atom)" $ List args
 
 stringToSymbol::[LispVal] -> ThrowsError LispVal
 stringToSymbol [(String s)] = return $ Atom s
+stringToSymbol args = throwError $ TypeMismatch "(String)" $ List args
 
 trapError action = catchError action (return . show)
 extractValue :: ThrowsError a -> a
