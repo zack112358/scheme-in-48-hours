@@ -16,13 +16,24 @@ import Control.Monad
 import Control.Monad.Error
 import Text.ParserCombinators.Parsec
 
+\end{code}
+The \verb+LispVal+ type encapsulates values manipulable by the Scheme
+environment. We also make \verb+LispVal+ an instance of a variety of nifty
+classes below, which allows us to manipulated it "from above" in Haskell much as
+we can manipulated it in Scheme.
+
+The departure from the Scheme-in-48-hours recipe is the class membership, as
+well as the PrimitiveOp alternate, which is used to bless Haskell functions as
+Scheme lambdas.
+\begin{code}
+
 data LispVal = Atom String
              | List [LispVal]
              | DottedList [LispVal] LispVal
              | Number Integer
              | String String
              | Bool Bool
-             | PrimitiveOp ([LispVal] -> LispVal)  -- Added for evaluator
+             | PrimitiveOp ([LispVal] -> ThrowsError LispVal)
 
 showVal :: LispVal -> String
 showVal (String s) = "\"" ++ s ++ "\""
@@ -72,7 +83,7 @@ instance Integral LispVal where
     toInteger (Number x) = x   -- Breaks out of LispVal
 
 
-data LispError = NumArgs Integer [LispVal]
+data LispError = NumArgs Integer LispVal
                | TypeMismatch String LispVal
                | Parser ParseError
                | BadSpecialForm String LispVal
@@ -86,7 +97,7 @@ showError (UnboundVar message varname)  = message ++ ": " ++ varname
 showError (BadSpecialForm message form) = message ++ ": " ++ show form
 showError (NotFunction message func)    = message ++ ": " ++ show func
 showError (NumArgs expected found)      = "Expected " ++ show expected 
-                                       ++ " args; found values " ++ unwords (map showVal found)
+                                       ++ " args; found values " ++ show found
 showError (TypeMismatch expected found) = "Invalid type: expected " ++ expected
                                        ++ ", found " ++ show found
 showError (Parser parseErr)             = "Parse error at " ++ show parseErr

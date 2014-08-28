@@ -18,22 +18,28 @@ import Types
 import Parser hiding (readExpr, main)
 
 context :: [(String, LispVal)]
-context = map (\ (name, fun) -> (name, operize(fun)))
-            [("+", foldl1 (+)),
-             ("-", foldl1 (-)),
-             ("*", foldl1 (+)),
-             ("/", foldl1 div),
-             ("mod", foldl1 mod),
-             ("quotient", foldl1 quot),
-             ("remainder", foldl1 rem),
-             ("symbol->string", symbolToString),
-             ("string->symbol", stringToSymbol)]
 
-symbolToString [(Atom s)] = String s
-stringToSymbol [(String s)] = Atom s
+context = [("+", binPlusOp $ foldl1 (+)),
+           ("-", binPlusOp $ foldl1 (-)),
+           ("*", binPlusOp $ foldl1 (*)),
+           ("/", binPlusOp $ foldl1 div),
+           ("mod", binPlusOp $ foldl1 mod),
+           ("quotient", binPlusOp $ foldl1 quot),
+           ("remainder", binPlusOp $ foldl1 rem),
+           ("symbol->string", PrimitiveOp symbolToString),
+           ("string->symbol", PrimitiveOp stringToSymbol)]
 
-operize :: ([LispVal] -> LispVal) -> LispVal
-operize = PrimitiveOp
+binPlusOp :: ([LispVal] -> LispVal) -> LispVal
+binPlusOp f = PrimitiveOp $
+    \args -> case args of [] -> throwError $ NumArgs 2 $ List []
+                          [arg] -> throwError $ NumArgs 2 $ List [arg]
+                          args -> return $ f args
+
+symbolToString::[LispVal] -> ThrowsError LispVal
+symbolToString [(Atom s)] = return $ String s
+
+stringToSymbol::[LispVal] -> ThrowsError LispVal
+stringToSymbol [(String s)] = return $ Atom s
 
 trapError action = catchError action (return . show)
 extractValue :: ThrowsError a -> a
@@ -53,8 +59,7 @@ eval (Atom id) = case (lookup id context) of
 eval other = throwError $ BadSpecialForm "Unrecognized special form" other
 
 applyLambda :: LispVal -> [LispVal] -> ThrowsError LispVal
-applyLambda (PrimitiveOp f) [] = throwError $ NumArgs 1 []
-applyLambda (PrimitiveOp f) args = return $ f args
+applyLambda (PrimitiveOp f) = f
 
 readExpr :: String -> ThrowsError LispVal
 readExpr input = case parse parseExpr "lisp" input of
