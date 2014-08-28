@@ -66,6 +66,7 @@ instance Eq LispVal where
     (==) (Number l) (Number r) = (==) l r
     (==) (String l) (String r) = (==) l r
     (==) (Bool l) (Bool r) = (==) l r
+    (==) _ _ = False
 
 instance Enum LispVal where
     fromEnum (Number x) = fromEnum x

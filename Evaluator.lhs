@@ -98,6 +98,9 @@ eval val@(String _) = return val    -- Strings, bools, numbers eval to selves
 eval val@(Bool _) = return val
 eval val@(Number _) = return val
 eval (List [Atom "quote", val]) = return val  -- Quoted lists eval to the quoted thing
+eval (List [Atom "if", cond, positive, negative]) =
+  do safeCond <- eval cond
+     if safeCond == (Bool False) then eval negative else eval positive
 eval (List (func@(Atom _) : args)) = eval func
                                      >>= \safefunc -> mapM eval args
                                      >>= applyLambda safefunc
