@@ -19,13 +19,14 @@ import Env
 import Evaluator hiding (main)
 import Parser hiding (readExpr, main)
 import System.IO
+import System.Console.Readline
 
 
 flushStr :: String -> IO ()
 flushStr str = putStr str >> hFlush stdout
 
-readPrompt :: String -> IO String
-readPrompt prompt = flushStr prompt >> getLine
+readPrompt :: String -> IO (Maybe String)
+readPrompt prompt = readline prompt
 
 runIOThrows :: IOThrowsError String -> IO String
 runIOThrows action = runErrorT (trapError action) >>= return . extractValue
@@ -37,14 +38,12 @@ evalString env exprString =
 evalPrint :: Env -> String -> IO ()
 evalPrint env exprString = evalString env exprString >>= putStrLn
 
-untilEOF :: IO a -> (a -> IO ()) -> IO ()
+untilEOF :: IO (Maybe a) -> (a -> IO ()) -> IO ()
 untilEOF prompt action = do
-  result <- try prompt
+  result <- prompt
   case result of
-    Left err -> do _ <- return $ show (err::IOException)
-                   putStrLn ""
-                   return ()
-    Right result -> (action result >> untilEOF prompt action)
+    Nothing -> return ()
+    Just result -> (action result >> untilEOF prompt action)
 
 runOnce :: String -> IO ()
 runOnce expr = newEnv >>= flip evalPrint expr
