@@ -14,6 +14,7 @@ Common types used in the interpreter.
 module Types where 
 import Control.Monad
 import Control.Monad.Error
+import Data.IORef
 import Text.ParserCombinators.Parsec
 
 \end{code}
@@ -103,12 +104,12 @@ data LispError = NumArgs Integer LispVal
                | Parser ParseError
                | BadSpecialForm String LispVal
                | NotFunction String String
-               | UnboundVar String String
+               | UnboundVar String
                | Default String
                | Unimplemented
 
 showError :: LispError -> String
-showError (UnboundVar message varname)  = message ++ ": " ++ varname
+showError (UnboundVar varname)          = "Unbound variable " ++ varname
 showError (BadSpecialForm message form) = message ++ ": " ++ show form
 showError (NotFunction message func)    = message ++ ": " ++ show func
 showError (NumArgs expected found)      = "Expected " ++ show expected 
@@ -126,6 +127,18 @@ instance Error LispError where
      strMsg = Default
 
 type ThrowsError = Either LispError
+
+type IOThrowsError = ErrorT LispError IO
+
+-- Essentially an identity function, but lifts in a way compatible with the
+-- error monad
+liftThrows :: ThrowsError a -> IOThrowsError a
+liftThrows (Left err) = throwError err
+liftThrows (Right val) = return val
+
+
+
+
 
 \end{code}
 

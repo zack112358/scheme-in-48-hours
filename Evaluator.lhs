@@ -14,33 +14,36 @@ import System.Environment
 import Text.ParserCombinators.Parsec
 import Control.Monad
 import Control.Monad.Error
+import Data.IORef
 import Types
+import Env
 import Parser hiding (readExpr, main)
 
-context :: [(String, LispVal)]
+nullEnv :: IO Env
+nullEnv = newIORef []
 
-context = [("+", numBinPlusOp $ foldl1 (+)),
-           ("-", numBinPlusOp $ foldl1 (-)),
-           ("*", numBinPlusOp $ foldl1 (*)),
-           ("/", numBinPlusOp $ foldl1 div),
-           ("mod", numBinPlusOp $ foldl1 mod),
-           ("quotient", numBinPlusOp $ foldl1 quot),
-           ("remainder", numBinPlusOp $ foldl1 rem),
-           ("symbol->string", PrimitiveOp symbolToString),
-           ("string->symbol", PrimitiveOp stringToSymbol),
-           ("=", boolBinNumOp (==)),
-           ("<", boolBinNumOp (<)),
-           (">", boolBinNumOp (>)),
-           ("/=", boolBinNumOp (/=)),
-           (">=", boolBinNumOp (>=)),
-           ("<=", boolBinNumOp (<=)),
-           ("&&", PrimitiveOp opAnd),
-           ("||", PrimitiveOp opOr),
-           ("string=?", boolBinStrOp (==)),
-           ("string<?", boolBinStrOp (<)),
-           ("string>?", boolBinStrOp (>)),
-           ("string<=?", boolBinStrOp (<=)),
-           ("string>=?", boolBinStrOp (>=))]
+builtins = [("+", numBinPlusOp $ foldl1 (+)),
+            ("-", numBinPlusOp $ foldl1 (-)),
+            ("*", numBinPlusOp $ foldl1 (*)),
+            ("/", numBinPlusOp $ foldl1 div),
+            ("mod", numBinPlusOp $ foldl1 mod),
+            ("quotient", numBinPlusOp $ foldl1 quot),
+            ("remainder", numBinPlusOp $ foldl1 rem),
+            ("symbol->string", PrimitiveOp symbolToString),
+            ("string->symbol", PrimitiveOp stringToSymbol),
+            ("=", boolBinNumOp (==)),
+            ("<", boolBinNumOp (<)),
+            (">", boolBinNumOp (>)),
+            ("/=", boolBinNumOp (/=)),
+            (">=", boolBinNumOp (>=)),
+            ("<=", boolBinNumOp (<=)),
+            ("&&", PrimitiveOp opAnd),
+            ("||", PrimitiveOp opOr),
+            ("string=?", boolBinStrOp (==)),
+            ("string<?", boolBinStrOp (<)),
+            ("string>?", boolBinStrOp (>)),
+            ("string<=?", boolBinStrOp (<=)),
+            ("string>=?", boolBinStrOp (>=))]
 
 \end{code}
 The typecheck function will check from the given spec of what argument types
@@ -93,34 +96,38 @@ trapError action = catchError action (return . show)
 extractValue :: ThrowsError a -> a
 extractValue (Right result) = result
 
-eval :: LispVal -> ThrowsError LispVal
-eval val@(String _) = return val    -- Strings, bools, numbers eval to selves
-eval val@(Bool _) = return val
-eval val@(Number _) = return val
-eval (List [Atom "quote", val]) = return val  -- Quoted lists eval to the quoted thing
-eval (List [Atom "if", cond, positive, negative]) =
-  do safeCond <- eval cond
-     if safeCond == (Bool False) then eval negative else eval positive
-eval (List (func@(Atom _) : args)) = eval func
-                                     >>= \safefunc -> mapM eval args
-                                     >>= applyLambda safefunc
-eval (Atom id) = case (lookup id context) of
-                   Nothing -> throwError $ UnboundVar "No such id" id
-                   Just val -> return val
-eval other = throwError $ BadSpecialForm "Unrecognized special form" other
+eval :: Env -> LispVal -> IOThrowsError LispVal
+eval env val@(String _) = return val    -- Strings, bools, numbers eval to selves
+eval env val@(Bool _) = return val
+eval env val@(Number _) = return val
+eval env (List [Atom "quote", val]) = return val  -- Quoted lists eval to the quoted thing
+eval env (List [Atom "define", Atom id, expr]) =
+  eval env expr >>= defineVar env id
+eval env (List [Atom "set!", Atom id, expr]) =
+  eval env expr >>= setVar env id
+eval env (List [Atom "if", cond, positive, negative]) =
+  do safeCond <- eval env cond
+     if safeCond == (Bool False)
+       then eval env negative
+       else eval env positive
+eval env (List (func@(Atom _) : args)) =
+  eval env func
+  >>= \safefunc -> mapM (eval env) args
+  >>= applyLambda safefunc
+eval env (Atom id) = getVar env id
+eval env other = throwError $ BadSpecialForm "Unrecognized special form" other
 
-applyLambda :: LispVal -> [LispVal] -> ThrowsError LispVal
-applyLambda (PrimitiveOp f) = f
+applyLambda :: LispVal -> [LispVal] -> IOThrowsError LispVal
+applyLambda (PrimitiveOp f) args = liftThrows $ f args
 
 readExpr :: String -> ThrowsError LispVal
 readExpr input = case parse parseExpr "lisp" input of
   Left err -> throwError $ Parser err
   Right val -> return val
 
-main :: IO ()
-main = do args <- getArgs
-          evaled <- return $ liftM show $ readExpr (args !! 0) >>= eval
-          putStrLn $ extractValue $ trapError evaled
+-- Action to create a new clean environment
+newEnv :: IO Env
+newEnv = nullEnv >>= flip withBoundVars builtins
 
 \end{code}
 

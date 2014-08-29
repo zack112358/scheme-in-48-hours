@@ -15,6 +15,7 @@ import Control.Monad
 import Control.Exception
 import Control.Monad.Error
 import Types
+import Env
 import Evaluator hiding (main)
 import Parser hiding (readExpr, main)
 import System.IO
@@ -26,12 +27,15 @@ flushStr str = putStr str >> hFlush stdout
 readPrompt :: String -> IO String
 readPrompt prompt = flushStr prompt >> getLine
 
-evalString :: String -> IO String
-evalString exprString = 
-  return $ extractValue $ trapError (liftM show $ readExpr exprString >>= eval)
+runIOThrows :: IOThrowsError String -> IO String
+runIOThrows action = runErrorT (trapError action) >>= return . extractValue
 
-evalPrint :: String -> IO ()
-evalPrint exprString = evalString exprString >>= putStrLn
+evalString :: Env -> String -> IO String
+evalString env exprString = 
+  runIOThrows $ liftM show $ (liftThrows $ readExpr exprString) >>= eval env
+
+evalPrint :: Env -> String -> IO ()
+evalPrint env exprString = evalString env exprString >>= putStrLn
 
 untilEOF :: IO a -> (a -> IO ()) -> IO ()
 untilEOF prompt action = do
@@ -42,15 +46,18 @@ untilEOF prompt action = do
                    return ()
     Right result -> (action result >> untilEOF prompt action)
 
+runOnce :: String -> IO ()
+runOnce expr = newEnv >>= flip evalPrint expr
+
 runRepl :: IO ()
-runRepl = untilEOF (readPrompt "Scheme> ") evalPrint
+runRepl = newEnv >>= untilEOF (readPrompt "❨•❩ ") . evalPrint
 
 main :: IO ()
 main = do args <- getArgs
           case args of
             [] -> runRepl
-            [str] -> evalPrint str
-            otherwise -> putStrLn "Program takes only 0 or 1 argument"
+            [str] -> runOnce str
+            otherwise -> putStrLn "Program takes at most 1 argument"
 
 
 \end{code}
