@@ -22,28 +22,28 @@ import Parser hiding (readExpr, main)
 nullEnv :: IO Env
 nullEnv = newIORef []
 
-builtins = [("+", numBinPlusOp $ foldl1 (+)),
-            ("-", numBinPlusOp $ foldl1 (-)),
-            ("*", numBinPlusOp $ foldl1 (*)),
-            ("/", numBinPlusOp $ foldl1 div),
-            ("mod", numBinPlusOp $ foldl1 mod),
-            ("quotient", numBinPlusOp $ foldl1 quot),
-            ("remainder", numBinPlusOp $ foldl1 rem),
-            ("symbol->string", PrimitiveOp symbolToString),
-            ("string->symbol", PrimitiveOp stringToSymbol),
-            ("=", boolBinNumOp (==)),
-            ("<", boolBinNumOp (<)),
-            (">", boolBinNumOp (>)),
-            ("/=", boolBinNumOp (/=)),
-            (">=", boolBinNumOp (>=)),
-            ("<=", boolBinNumOp (<=)),
-            ("&&", PrimitiveOp opAnd),
-            ("||", PrimitiveOp opOr),
-            ("string=?", boolBinStrOp (==)),
-            ("string<?", boolBinStrOp (<)),
-            ("string>?", boolBinStrOp (>)),
-            ("string<=?", boolBinStrOp (<=)),
-            ("string>=?", boolBinStrOp (>=))]
+builtins = [numBinPlusOp "+" $ foldl1 (+),
+            numBinPlusOp "-" $ foldl1 (-),
+            numBinPlusOp "*" $ foldl1 (*),
+            numBinPlusOp "/" $ foldl1 div,
+            numBinPlusOp "mod" $ foldl1 mod,
+            numBinPlusOp "quotient" $ foldl1 quot,
+            numBinPlusOp "remainder" $ foldl1 rem,
+            ("symbol->string", PrimitiveOp "symbol->string" symbolToString),
+            ("string->symbol", PrimitiveOp "string->symbol" stringToSymbol),
+            boolBinNumOp "=" (==),
+            boolBinNumOp "<" (<),
+            boolBinNumOp ">" (>),
+            boolBinNumOp "/=" (/=),
+            boolBinNumOp ">=" (>=),
+            boolBinNumOp "<=" (<=),
+            ("&&", PrimitiveOp "&&" opAnd),
+            ("||", PrimitiveOp "||" opOr),
+            boolBinStrOp "string=?" (==),
+            boolBinStrOp "string<?" (<),
+            boolBinStrOp "string>?" (>),
+            boolBinStrOp "string<=?" (<=),
+            boolBinStrOp "string>=?" (>=)]
 
 \end{code}
 The typecheck function will check from the given spec of what argument types
@@ -60,20 +60,22 @@ typeCheckArgs typePred typeName (arg:args) =
     then typeCheckArgs typePred typeName args
     else throwError $ TypeMismatch typeName arg
 
-numBinPlusOp :: ([LispVal] -> LispVal) -> LispVal
-numBinPlusOp f = PrimitiveOp $
+-- Convert an n-ary numerical fun into name, lambda pair
+numBinPlusOp :: String -> ([LispVal] -> LispVal) -> (String, LispVal)
+numBinPlusOp name f = (name, PrimitiveOp name $
   \args -> case args of [] -> throwError $ NumArgs 2 $ List []
                         [arg] -> throwError $ NumArgs 2 $ List [arg]
                         args -> typeCheckArgs isNumber "Number" args
-                                >> (return $ f args)
+                                >> (return $ f args))
 
-boolBinOp :: (LispVal -> Bool) -> String -> (LispVal -> LispVal -> Bool) -> LispVal
-boolBinOp typePred typeName f = PrimitiveOp $ \args ->
+-- Convert a function that takes args of given type into a name, lambda pair
+boolBinOp :: (LispVal -> Bool) -> String -> String -> (LispVal -> LispVal -> Bool) -> (String, LispVal)
+boolBinOp typePred typeName name f = (name, PrimitiveOp name $ \args ->
   case args of
     [l, r] -> typeCheckArgs typePred typeName args
               >> (return $ Bool $ f l r)
     _ -> throwError $ TypeMismatch ("(" ++ typeName ++ " " ++ typeName ++ ")")
-                    $ List args
+                    $ List args)
 
 boolBinBoolOp = boolBinOp isBool "Bool"
 boolBinNumOp = boolBinOp isNumber "Number"
@@ -118,7 +120,7 @@ eval env (Atom id) = getVar env id
 eval env other = throwError $ BadSpecialForm "Unrecognized special form" other
 
 applyLambda :: LispVal -> [LispVal] -> IOThrowsError LispVal
-applyLambda (PrimitiveOp f) args = liftThrows $ f args
+applyLambda (PrimitiveOp name f) args = liftThrows $ f args
 
 readExpr :: String -> ThrowsError LispVal
 readExpr input = case parse parseExpr "lisp" input of

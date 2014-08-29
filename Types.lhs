@@ -34,7 +34,10 @@ data LispVal = Atom String
              | Number Integer
              | String String
              | Bool Bool
-             | PrimitiveOp ([LispVal] -> ThrowsError LispVal)
+             | PrimitiveOp String ([LispVal] -> ThrowsError LispVal)
+             | Lambda {formals :: LispVal,
+                       body :: LispVal,
+                       env :: Env}
 
 isAtom (Atom _) = True
 isAtom _ = False
@@ -47,7 +50,7 @@ isString (String _) = True
 isString _ = False
 isBool (Bool _) = True
 isBool _ = False
-isPrimitiveOp (PrimitiveOp _) = True
+isPrimitiveOp (PrimitiveOp _ _) = True
 isPrimitiveOp _ = False
 
 showVal :: LispVal -> String
@@ -58,6 +61,7 @@ showVal (Atom id) = id
 showVal (List list) = "(" ++ unwords(map showVal list) ++ ")"
 showVal (DottedList list tail) =
     "(" ++ unwords(map showVal list) ++ " . " ++ showVal tail ++ ")"
+showVal (PrimitiveOp name _) = name
 
 instance Show LispVal where show = showVal
 
@@ -137,6 +141,8 @@ liftThrows (Left err) = throwError err
 liftThrows (Right val) = return val
 
 
+
+type Env = IORef [(String, IORef LispVal)]
 
 
 
