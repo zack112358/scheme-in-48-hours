@@ -17,6 +17,7 @@ import Text.ParserCombinators.Parsec hiding (spaces) -- spaces we define
                                                      -- ourselves
 import System.Environment
 import Control.Monad
+import Control.Monad.Error
 import Types
 
 symbol :: Parser Char
@@ -80,18 +81,12 @@ parseExpr = parseNumber
             <|> parseList
             <|> parseQuoted
 
+tryRead :: Parser a -> String -> ThrowsError a
+tryRead parser input = case parse parser "lisp" input of
+  Left err -> throwError $ Parser err
+  Right value -> return value
 
--- Testing parse function and main function
-readExpr :: String -> String
-readExpr input = case parse parseExpr "lisp" input of
-    Left err -> "No match: " ++ show err
-    Right val -> "Found value"
-
-main :: IO ()
-main = do 
-    args <- getArgs
-    putStrLn (readExpr (args !! 0))
-
+readExprs = tryRead $ sepBy parseExpr spaces
 
 \end{code}
 \end{document}

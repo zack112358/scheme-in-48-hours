@@ -17,7 +17,7 @@ import Control.Monad.Error
 import Data.IORef
 import Types
 import Env
-import Parser hiding (readExpr, main)
+import Parser
 
 nullEnv :: IO Env
 nullEnv = newIORef []
@@ -93,10 +93,6 @@ opAnd [(Bool l), (Bool r)] = return $ Bool (l && r)
 opAand args = throwError $ TypeMismatch "(Bool Bool)" $ List args
 opOr [(Bool l), (Bool r)] = return $ Bool (l || r)
 opOr args = throwError $ TypeMismatch "(Bool Bool)" $ List args
-
-trapError action = catchError action (return . show)
-extractValue :: ThrowsError a -> a
-extractValue (Right result) = result
 
 eval :: Env -> LispVal -> IOThrowsError LispVal
 
@@ -185,11 +181,6 @@ formalBindings x@(Bool _) y@(Bool _) =
 
 formalBindings formals args = throwError $ PatternMatch formals args
     
-
-readExpr :: String -> ThrowsError LispVal
-readExpr input = case parse parseExpr "lisp" input of
-  Left err -> throwError $ Parser err
-  Right val -> return val
 
 -- Action to create a new clean environment
 newEnv :: IO Env
