@@ -35,7 +35,7 @@ data LispVal = Atom String
              | String String
              | Bool Bool
              | PrimitiveOp String ([LispVal] -> ThrowsError LispVal)
-             | Lambda {formals :: LispVal,
+             | Lambda {formal :: LispVal,
                        body :: LispVal,
                        env :: Env}
 
@@ -62,6 +62,8 @@ showVal (List list) = "(" ++ unwords(map showVal list) ++ ")"
 showVal (DottedList list tail) =
     "(" ++ unwords(map showVal list) ++ " . " ++ showVal tail ++ ")"
 showVal (PrimitiveOp name _) = name
+showVal (Lambda formal body env) =
+  "(lambda " ++ showVal formal ++ " " ++ showVal body ++ ")"
 
 instance Show LispVal where show = showVal
 
@@ -105,6 +107,7 @@ instance Integral LispVal where
 
 data LispError = NumArgs Integer LispVal
                | TypeMismatch String LispVal
+               | PatternMatch LispVal LispVal
                | Parser ParseError
                | BadSpecialForm String LispVal
                | NotFunction String String
@@ -117,9 +120,11 @@ showError (UnboundVar varname)          = "Unbound variable " ++ varname
 showError (BadSpecialForm message form) = message ++ ": " ++ show form
 showError (NotFunction message func)    = message ++ ": " ++ show func
 showError (NumArgs expected found)      = "Expected " ++ show expected 
-                                       ++ " args; found values " ++ show found
+                                          ++ " args; found values " ++ show found
 showError (TypeMismatch expected found) = "Invalid type: expected " ++ expected
-                                       ++ ", found " ++ show found
+                                          ++ ", found " ++ show found
+showError (PatternMatch expected found) = "Pattern match: expected " ++ show expected
+                                          ++ ", found " ++ show found
 showError (Parser parseErr)             = "Parse error at " ++ show parseErr
 showError (Default s)                   = s
 showError (Unimplemented)               = "Unimplemented"
@@ -141,9 +146,7 @@ liftThrows (Left err) = throwError err
 liftThrows (Right val) = return val
 
 
-
 type Env = IORef [(String, IORef LispVal)]
-
 
 
 \end{code}

@@ -99,28 +99,91 @@ extractValue :: ThrowsError a -> a
 extractValue (Right result) = result
 
 eval :: Env -> LispVal -> IOThrowsError LispVal
-eval env val@(String _) = return val    -- Strings, bools, numbers eval to selves
+
+-- Literals eval to themselves
+eval env val@(String _) = return val
 eval env val@(Bool _) = return val
 eval env val@(Number _) = return val
-eval env (List [Atom "quote", val]) = return val  -- Quoted lists eval to the quoted thing
+
+-- Quoted lists eval to the quoted thing
+eval env (List [Atom "quote", val]) = return val
+
+-- Define a var
 eval env (List [Atom "define", Atom id, expr]) =
   eval env expr >>= defineVar env id
+
+-- Lambda define shorthand
+eval env (List [Atom "define", List ((Atom id):formals), body]) =
+  defineVar env id (Lambda (List formals) body env)
+eval env (List [Atom "define", DottedList ((Atom id):formals) rest, body]) =
+  defineVar env id (Lambda (DottedList formals rest) body env)
+
+-- Setting vars to values
 eval env (List [Atom "set!", Atom id, expr]) =
   eval env expr >>= setVar env id
+
+-- Branching
 eval env (List [Atom "if", cond, positive, negative]) =
   do safeCond <- eval env cond
      if safeCond == (Bool False)
        then eval env negative
        else eval env positive
-eval env (List (func@(Atom _) : args)) =
+
+-- Lambdas
+eval env (List [Atom "lambda", formal, body]) =
+  return $ Lambda formal body env
+eval env (List (func : args)) =
   eval env func
   >>= \safefunc -> mapM (eval env) args
   >>= applyLambda safefunc
+
+-- Variables eval to their values
 eval env (Atom id) = getVar env id
+
+-- Anything else is broken
 eval env other = throwError $ BadSpecialForm "Unrecognized special form" other
 
 applyLambda :: LispVal -> [LispVal] -> IOThrowsError LispVal
 applyLambda (PrimitiveOp name f) args = liftThrows $ f args
+applyLambda (Lambda formal body env) args = do
+  bindings <- liftThrows $ formalBindings formal (List args)
+  env <- liftIO nullEnv
+  boundEnv <- liftIO $ withBoundVars bindings env
+  eval boundEnv body
+applyLambda notFun args = throwError $ TypeMismatch "lambda" notFun
+  
+
+-- Take the given formal and the given args list and create a list of new
+-- bindings to add to the environment
+formalBindings :: LispVal -> LispVal -> ThrowsError [(String, LispVal)]
+formalBindings (Atom id) arg = return [(id, arg)]
+formalBindings (List (formal:formals)) (List (arg:args)) = do
+  first <- formalBindings formal arg
+  rest <- formalBindings (List formals) (List args) 
+  return $ first ++ rest
+formalBindings (List []) (List []) = return []
+formalBindings (DottedList formals formal)
+               (DottedList args arg) = do
+  last <- formalBindings formal arg
+  rest <- formalBindings (List formals) (List args)
+  return $ rest ++ last
+formalBindings (DottedList (formal:formals) rest)
+               (List (arg:args)) = do
+  first <- formalBindings formal arg
+  rest <- formalBindings (DottedList formals rest) (List args)
+  return $ first ++ rest
+formalBindings (DottedList [] rest) arg =
+  formalBindings rest arg
+formalBindings x@(Number _) y@(Number _) = 
+  if x == y then return [] else throwError $ PatternMatch x y
+formalBindings x@(String _) y@(String _) = 
+  if x == y then return [] else throwError $ PatternMatch x y
+formalBindings x@(Bool _) y@(Bool _) = 
+  if x == y then return [] else throwError $ PatternMatch x y
+
+
+formalBindings formals args = throwError $ PatternMatch formals args
+    
 
 readExpr :: String -> ThrowsError LispVal
 readExpr input = case parse parseExpr "lisp" input of
@@ -129,11 +192,9 @@ readExpr input = case parse parseExpr "lisp" input of
 
 -- Action to create a new clean environment
 newEnv :: IO Env
-newEnv = nullEnv >>= flip withBoundVars builtins
+newEnv = nullEnv >>= withBoundVars builtins
 
 \end{code}
-
-
 
 
 \end{document}

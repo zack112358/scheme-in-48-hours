@@ -1,5 +1,5 @@
 include_rules
-ghc = env HOME=/Users/surefire ghc -v -auto-all -caf-all
+ghc = env HOME=/Users/surefire ghc -prof -fprof-auto -fprof-cafs
 : foreach *.lhs |> pdflatex %f < /dev/null > /dev/null |> %B.pdf %B.aux %B.log
 : Types.lhs | |> $(ghc) -c %f |> %B.hi %B.o
 : Parser.lhs | Types.hi |> $(ghc) -c %f |> %B.hi %B.o

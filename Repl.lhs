@@ -49,14 +49,15 @@ runOnce :: String -> IO ()
 runOnce expr = newEnv >>= flip evalPrint expr
 
 runRepl :: IO ()
-runRepl = newEnv >>= untilEOF (readPrompt "❨•❩ ") . evalPrint
+runRepl = newEnv >>= untilEOF (readPrompt "❨-❩ ") . evalPrint
 
 main :: IO ()
 main = do args <- getArgs
           case args of
-            [] -> runRepl
+            [] -> (runRepl >> putStrLn "Quit")
             [str] -> runOnce str
             otherwise -> putStrLn "Program takes at most 1 argument"
+
 
 
 \end{code}
