@@ -135,7 +135,7 @@ eval env (List [Atom "lambda", formal, body]) =
 eval env (List (func : args)) =
   eval env func
   >>= \safefunc -> mapM (eval env) args
-  >>= applyLambda safefunc
+  >>= apply safefunc
 
 -- Variables eval to their values
 eval env (Atom id) = getVar env id
@@ -143,14 +143,15 @@ eval env (Atom id) = getVar env id
 -- Anything else is broken
 eval env other = throwError $ BadSpecialForm "Unrecognized special form" other
 
-applyLambda :: LispVal -> [LispVal] -> IOThrowsError LispVal
-applyLambda (PrimitiveOp name f) args = liftThrows $ f args
-applyLambda (Lambda formal body env) args = do
+apply :: LispVal -> [LispVal] -> IOThrowsError LispVal
+apply (PrimitiveOp name f) args = liftThrows $ f args
+apply (Lambda formal body env) args = do
   bindings <- liftThrows $ formalBindings formal (List args)
   env <- liftIO nullEnv
   boundEnv <- liftIO $ withBoundVars bindings env
   eval boundEnv body
-applyLambda notFun args = throwError $ TypeMismatch "lambda" notFun
+apply (IOOp name f) args = f args
+apply notFun args = throwError $ TypeMismatch "lambda" notFun
   
 
 -- Take the given formal and the given args list and create a list of new

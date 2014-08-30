@@ -15,6 +15,7 @@ module Types where
 import Control.Monad
 import Control.Monad.Error
 import Data.IORef
+import System.IO
 import Text.ParserCombinators.Parsec
 
 \end{code}
@@ -38,6 +39,8 @@ data LispVal = Atom String
              | Lambda {formal :: LispVal,
                        body :: LispVal,
                        env :: Env}
+             | IOOp String ([LispVal] -> IOThrowsError LispVal)
+             | Port Handle
 
 isAtom (Atom _) = True
 isAtom _ = False
@@ -64,6 +67,8 @@ showVal (DottedList list tail) =
 showVal (PrimitiveOp name _) = name
 showVal (Lambda formal body env) =
   "(lambda " ++ showVal formal ++ " " ++ showVal body ++ ")"
+showVal (IOOp name _) = name
+showVal (Port h) = "<" ++ show h ++ ">"
 
 instance Show LispVal where show = showVal
 
