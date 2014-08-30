@@ -54,10 +54,10 @@ untilEOF prompt action = do
     Just result -> (action result >> untilEOF prompt action)
 
 runOnce :: String -> IO ()
-runOnce expr = newEnv >>= flip evalPrint expr
+runOnce expr = defaultEnv >>= flip evalPrint expr
 
 runRepl :: IO ()
-runRepl = newEnv >>= untilEOF (readPrompt "❨-❩ ") . evalPrint
+runRepl = defaultEnv >>= untilEOF (readPrompt "❨-❩ ") . evalPrint
 
 main :: IO ()
 main = do args <- getArgs

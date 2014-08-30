@@ -143,7 +143,6 @@ apply :: LispVal -> [LispVal] -> IOThrowsError LispVal
 apply (PrimitiveOp name f) args = liftThrows $ f args
 apply (Lambda formal body env) args = do
   bindings <- liftThrows $ formalBindings formal (List args)
-  env <- liftIO nullEnv
   boundEnv <- liftIO $ withBoundVars bindings env
   eval boundEnv body
 apply (IOOp name f) args = f args
@@ -183,8 +182,8 @@ formalBindings formals args = throwError $ PatternMatch formals args
     
 
 -- Action to create a new clean environment
-newEnv :: IO Env
-newEnv = nullEnv >>= withBoundVars builtins
+defaultEnv :: IO Env
+defaultEnv = nullEnv >>= withBoundVars builtins
 
 \end{code}
 

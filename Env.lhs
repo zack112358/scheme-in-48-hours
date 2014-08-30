@@ -57,9 +57,23 @@ defineVar e i v = liftIO $ bindVar e i v
 -- given vars in it.
 withBoundVars :: [(String, LispVal)] -> Env -> IO Env
 withBoundVars bindings envRef =
-  readIORef envRef >>= newIORef
-  >>= \env -> mapM (uncurry (bindVar env)) bindings
-  >> return env
+  do env <- readIORef envRef
+     newEnvRef <- newIORef env
+     mapM (uncurry (bindVar newEnvRef)) bindings
+     return newEnvRef
+
+dumpEnv :: Env -> IO ()
+dumpEnv env = putStrLn "Env:" >> fmtEnv env >>= putStrLn
+
+fmtOneEnv :: (String, IORef LispVal) -> IO String
+fmtOneEnv (name, valRef) = do
+  val <- readIORef valRef
+  return $ "(define " ++ name ++ " " ++ (show val) ++ ")"
+
+fmtEnv :: Env -> IO String
+fmtEnv envRef = do env <- readIORef envRef
+                   lines <- mapM fmtOneEnv env
+                   return $ unlines lines
 
 
 
